@@ -1,0 +1,6 @@
+# This directory stores pretrained backbone model weights
+# Downloaded models will be cached here to avoid re-downloading
+
+# Expected files:
+# - face_model.h5 (FER2013 CNN for facial emotion detection)
+# - wav2vec2-lg-xlsr-en-speech-emotion-recognition/ (SER model from HuggingFace)

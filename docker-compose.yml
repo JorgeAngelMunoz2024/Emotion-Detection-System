@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  # CPU-only service for local development without GPU
+  emotion-detector-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cpu
+    container_name: emotion-detector-cpu
+    volumes:
+      - ./data:/app/data
+      - ./checkpoints:/app/checkpoints
+      - ./backbones:/app/backbones
+      - ./logs:/app/logs
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: python train.py
+    stdin_open: true
+    tty: true
+    networks:
+      - ml-network
+
+  # GPU service for VM deployment with NVIDIA GPU
+  emotion-detector-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: gpu
+    container_name: emotion-detector-gpu
+    volumes:
+      - ./data:/app/data
+      - ./checkpoints:/app/checkpoints
+      - ./backbones:/app/backbones
+      - ./logs:/app/logs
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CUDA_VISIBLE_DEVICES=0
+    command: python train.py
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - ml-network
+
+  # GUI demo service with X11 forwarding for PyQt5 application
+  emotion-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cpu
+    container_name: emotion-demo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+    network_mode: "host"  # Use host network for direct PulseAudio access
+    volumes:
+      - ./data:/app/data
+      - ./checkpoints:/app/checkpoints
+      - ./backbones:/app/backbones
+      - ./logs:/app/logs
+      - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # PulseAudio for audio input/output
+      - /run/user/1000/pulse:/run/user/1000/pulse:ro
+      - ~/.config/pulse/cookie:/tmp/pulse-cookie:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - QT_QPA_PLATFORM_PLUGIN_PATH=  # Prevent conflicts with any cv2 Qt plugins
+      - XDG_RUNTIME_DIR=/run/user/1000
+      # PulseAudio settings
+      - PULSE_SERVER=unix:/run/user/1000/pulse/native
+      - PULSE_COOKIE=/tmp/pulse-cookie
+      # Suppress JACK/ALSA noise
+      - JACK_NO_START_SERVER=1
+      - JACK_NO_AUDIO_RESERVATION=1
+      # Fix home directory for cache
+      - HOME=/tmp
+      # Persist modelscope downloads in the volume-mounted backbones dir
+      - MODELSCOPE_CACHE=/app/backbones/emotion2vec_models
+      # Fix getpass.getuser() for non-root UID (no /etc/passwd entry)
+      - LOGNAME=appuser
+      - USER=appuser
+      - TORCHINDUCTOR_CACHE_DIR=/tmp/torch_cache
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+      # ALSA sound devices
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
+      - video
+    user: "${UID:-1000}:${GID:-1000}"
+    command: python tools/demo/multimodal_demo.py
+    stdin_open: true
+    tty: true
+
+  # Jupyter notebook service for interactive development
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: cpu
+    container_name: emotion-detector-jupyter
+    volumes:
+      - ./data:/app/data
+      - ./checkpoints:/app/checkpoints
+      - ./backbones:/app/backbones
+      - ./logs:/app/logs
+      - .:/app
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+    networks:
+      - ml-network
+
+networks:
+  ml-network:
+    driver: bridge

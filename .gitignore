@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model checkpoints and data
+checkpoints/
+data/
+logs/
+runs/
+*.pth
+*.pt
+*.ckpt
+
+# Model weights and backbones (large files)
+backbones/emotion2vec_models/
+backbones/face_parsing_models/
+backbones/ser_models/ehcalabres_wav2vec2-lg-xlsr-en-speech-emotion-recognition/model.safetensors
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.tar.gz
+*.backup

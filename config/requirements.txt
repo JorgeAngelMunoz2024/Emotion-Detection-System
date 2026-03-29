@@ -1,0 +1,48 @@
+# Python dependencies for Real-time Emotion Detection
+
+# Core deep learning libraries
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+# tensorflow>=2.13.0  # COMMENTED: Only needed for FER2013 Keras model (not using for lip segmentation)
+
+# Scientific computing
+scipy>=1.10.0
+numpy>=1.24.0
+
+# Computer vision and webcam
+opencv-python>=4.7.0
+opencv-contrib-python>=4.7.0
+Pillow>=9.5.0
+# mediapipe>=0.10.0  # COMMENTED: Using BiSeNet lip segmentation instead of MediaPipe landmarks
+
+# Data handling
+pandas>=2.0.0
+scikit-learn>=1.2.0
+
+# Training utilities
+tqdm>=4.65.0
+tensorboard>=2.12.0
+
+# Configuration and logging
+pyyaml>=6.0
+python-dotenv>=1.0.0
+
+# For visualization (optional)
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Audio processing
+pyaudio>=0.2.13
+SpeechRecognition>=3.10.0  # High-level audio capture (handles PyAudio/ALSA/PulseAudio)
+soundfile>=0.12.0  # For audio file I/O
+
+# Pretrained Speech Emotion Recognition (SER) - emotion2vec+
+funasr>=1.0.0  # FunASR for emotion2vec+ models
+modelscope>=1.9.0  # ModelScope for model downloading
+
+# Pretrained Facial Emotion Recognition (FER)
+# fer>=22.5.0  # COMMENTED: Not using pretrained FER model for lip segmentation approach
+
+# GUI for demo application (using tkinter - comes with Python, no extra install needed)
+
