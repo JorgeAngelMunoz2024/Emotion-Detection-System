@@ -1,233 +1,158 @@
-# Real-time Emotion Detection - Hybrid CNN + Transformer
+# Multi Modal Emotion Recognition System
 
-A PyTorch implementation of real-time emotion detection from webcam video, combining CNN spatial features with Transformer temporal modeling.
+A real-time multimodal emotion recognition system that fuses facial segmentation analysis with speech emotion recognition (SER) to detect 7 emotions from webcam video and microphone audio, running in a Docker container.
 
-## 🎯 Overview
+## Overview
 
-This project detects emotions from webcam video and audio in real-time using a multimodal architecture:
+This system combines two modalities for robust emotion detection:
 
-1. **Spatial CNN**: Extracts features from facial regions (eyes, mouth, nose, cheeks) with attention
-2. **Temporal Transformer**: Models emotion transitions over time from frame sequences  
-3. **Audio Sentiment**: NLP-based sentiment analysis from speech transcription
-4. **Personalized Acoustic Profiling**: Person-specific vocal baseline tracking with adaptive normalization
-5. **Multimodal Fusion**: Combines visual + audio + personalized acoustic predictions
+1. **Visual — BiSeNet Face Segmentation**: Parses face regions (lips, eyes, eyebrows, nose, cheeks) using a pretrained BiSeNet model on CelebAMask-HQ, then extracts FACS-inspired geometric features for rule-based emotion classification
+2. **Audio — Speech Emotion Recognition**: Uses the emotion2vec+ model (via FunASR) to classify emotions directly from raw audio waveforms
+3. **Confidence-Adaptive Fusion**: Dynamically weights visual and audio predictions based on per-modality confidence, with agreement boosting
 
 **7 Emotions**: angry, disgust, fear, happy, sad, surprise, neutral
 
-## 🚀 Quick Start
+## Key Features
 
-### Test Models (No Training Needed)
-```bash
-python models/emotion_detector.py
-```
+- **BiSeNet face parsing** with JIT-traced inference and async segmentation worker thread
+- **Progressive region visualization**: lips, eyes, eyebrows, nose, cheeks with buffer zones
+- **FACS-based emotion classifier** with 18+ geometric features extracted from segmented face regions
+- **Personalized calibration system**: Guided 7-emotion calibration flow that computes per-user decision thresholds using neutral baseline
+- **emotion2vec+ SER**: Pretrained speech emotion model running inference on 2-second audio windows
+- **Feature smoothing** (8-frame buffer) and **emotion smoothing** (15-frame weighted history with hysteresis) for stable output
+- **Motion compensation** via phase correlation to skip redundant segmentation on static frames
+- **Training data recording**: H.264 video (via ffmpeg re-encode) + WAV audio + HTML visualization dashboard with Chart.js
+- **ALSA/JACK noise suppression**: ctypes-level error handler + fd-level stderr redirection for clean container logs
+- **Docker containerized** with PulseAudio passthrough, X11 forwarding, and webcam device access
 
-### Run Webcam Detection
-```bash
-# Hybrid mode (CNN + Transformer)
-python scripts/webcam_detector.py
+## Quick Start
 
-# Spatial only (faster)
-python scripts/webcam_detector.py --spatial-only
-
-# With trained model
-python scripts/webcam_detector.py --model-path checkpoints/best_model.pth
-```
-
-### 🎥 Record Videos with Facial Landmarks & Attention
-```bash
-# Real-time recording with landmarks and attention visualization
-python tools/video/video_recorder_with_landmarks.py
-
-# Process existing videos
-python tools/video/process_video.py input_video.mp4
-
-# Analyze attention patterns
-python tools/video/analyze_attention.py video_analysis.json
-
-# Quick help
-./tools/video/video_help.sh
-```
-
-**Video Features:**
-- **468 facial landmarks** from MediaPipe Face Mesh
-- **Attention heatmaps** showing where the model focuses
-- **Smart region highlighting** based on detected emotions
-- **Frame-by-frame analysis** saved to JSON
-- **Interactive controls**: Toggle landmarks (L), attention (A), recording (R)
-
-### 🎤 Audio & Personalized Acoustic Analysis
-```bash
-# Audio-only sentiment analysis from speech
-python tools/audio/audio_sentiment_analyzer.py
-
-# Multimodal fusion (Visual + Audio + Personalized Acoustic)
-python tools/audio/multimodal_fusion.py --device cuda --person-id user123
-
-# Test audio fusion logic
-make test-audio
-
-# Test personalized acoustic profiling
-make test-personalized
-```
-
-**Audio Features:**
-- **Speech-to-Text**: Converts speech to text (Google/Sphinx)
-- **Sentiment Analysis**: Transformer-based (DistilBERT) or TextBlob
-- **Emotion Keywords**: Detects happy, sad, angry, fear from text
-- **Positive/Negative Phrases**: Identifies "I love", "I hate", etc.
-- **Personalized Acoustic Profiling** 🆕: Person-specific vocal baseline tracking
-  - Individual pitch/energy/speaking rate baselines
-  - Z-score normalization per person
-  - Continuous adaptive learning
-  - Multi-user profile management
-- **Multimodal Fusion**: Combines visual + audio + personalized acoustic
-
-### Controls
-- **Q**: Quit
-- **S**: Save screenshot
-- **R**: Start/Stop recording (video recorder only)
-- **L**: Toggle landmarks (video recorder only)
-- **A**: Toggle attention (video recorder only)
-
-## 📁 Project Structure
-
-```
-MLProject/
-├── config/                     # Configuration files
-│   ├── config.py              # Model and training configuration
-│   └── requirements.txt       # Python dependencies
-├── models/                     # Neural network models
-│   ├── emotion_detector.py    # Main emotion detection models
-│   ├── mediapipe_detector.py  # MediaPipe-enhanced detection
-│   ├── audio_emotion_fusion.py # Multimodal fusion with audio
-│   ├── personalized_acoustic_profiling.py # Person-specific acoustics 🆕
-│   ├── transformer.py         # Transformer architecture
-│   └── cnn.py                 # CNN architectures
-├── scripts/                    # Executable scripts
-│   ├── train.py               # Training script
-│   ├── webcam_detector.py     # Real-time webcam detection
-│   ├── utils.py               # Utility functions
-│   └── quick_start.sh         # Interactive menu
-├── tools/                      # Development tools
-│   ├── video/                 # Video recording & analysis
-│       ├── video_recorder_with_landmarks.py
-│       ├── process_video.py
-│       ├── analyze_attention.py
-│       └── video_help.sh
-│   └── audio/                 # Audio sentiment analysis 🎤 NEW!
-│       ├── audio_sentiment_analyzer.py
-│       ├── multimodal_fusion.py
-│       └── README.md
-├── tests/                      # Test files
-│   ├── test_mediapipe_hybrid.py
-│   ├── test_models.py
-│   ├── test_audio_fusion_logic.py  # Audio fusion tests 🆕
-│   └── test_personalized_acoustic_integration.py  # Personalized profiling tests 🆕
-├── docs/                       # Documentation
-│   ├── README.md              # Main documentation
-│   ├── architecture/          # Architecture documentation
-│   ├── guides/                # User guides
-│   └── examples/              # Usage examples
-├── checkpoints/               # Saved model checkpoints
-├── data/                      # Datasets
-├── logs/                      # Training logs
-└── runs/                      # Experiment runs
-```
-
-## 📚 Documentation
-
-- **Main Guide**: [docs/README.md](docs/README.md)
-- **Quick Reference**: [docs/guides/QUICK_REFERENCE.md](docs/guides/QUICK_REFERENCE.md)
-- **Video Recording**: [docs/guides/README_VIDEO_RECORDING.md](docs/guides/README_VIDEO_RECORDING.md)
-- **Architecture**: [docs/architecture/ARCHITECTURE_SUMMARY.md](docs/architecture/ARCHITECTURE_SUMMARY.md)
-- **Examples**: [docs/examples/VIDEO_EXAMPLES.md](docs/examples/VIDEO_EXAMPLES.md)
-
-## 🚀 Installation
+### Run with Docker (recommended)
 
 ```bash
-# Install dependencies
-pip install -r config/requirements.txt
+# Build and start the demo
+docker-compose up emotion-demo
 
-# Or use Docker
-docker-compose up emotion-detector-cpu
+# Or rebuild from scratch
+docker-compose build emotion-demo && docker-compose up emotion-demo
 ```
 
-## 🎓 Usage Examples
+The GUI window will appear via X11 forwarding. Click **"Start Audio"** to enable the microphone, and **"Calibrate"** to personalize emotion thresholds.
 
-### Training
+### Prerequisites
+
+- Docker and docker-compose
+- Webcam (`/dev/video0`)
+- PulseAudio running on host (for audio capture)
+- X11 display (for GUI)
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Tkinter GUI                        │
+│  ┌──────────┐  ┌──────────┐  ┌───────────────────┐ │
+│  │ Webcam   │  │ Emotion  │  │ Controls:         │ │
+│  │ Feed +   │  │ Display  │  │ Calibrate, Record │ │
+│  │ Mask     │  │ + Chart  │  │ Audio, Sensitivity│ │
+│  └──────────┘  └──────────┘  └───────────────────┘ │
+└─────────────────┬───────────────────┬───────────────┘
+                  │                   │
+    ┌─────────────▼──────┐  ┌────────▼────────┐
+    │  VideoProcessor    │  │ AudioProcessor  │
+    │  ┌──────────────┐  │  │ ┌─────────────┐ │
+    │  │ BiSeNet      │  │  │ │ PyAudio     │ │
+    │  │ Segmentation │  │  │ │ Stream      │ │
+    │  │ (async)      │  │  │ │ (16kHz)     │ │
+    │  └──────┬───────┘  │  │ └──────┬──────┘ │
+    │  ┌──────▼───────┐  │  │ ┌──────▼──────┐ │
+    │  │ Feature      │  │  │ │ emotion2vec+│ │
+    │  │ Extraction   │  │  │ │ SER Model   │ │
+    │  │ (18 FACS)    │  │  │ │ (2s window) │ │
+    │  └──────┬───────┘  │  │ └──────┬──────┘ │
+    │  ┌──────▼───────┐  │  │        │        │
+    │  │ Rule-based / │  │  └────────┼────────┘
+    │  │ Calibrated   │  │           │
+    │  │ Classifier   │  │           │
+    │  └──────┬───────┘  │           │
+    └─────────┼──────────┘           │
+              │                      │
+    ┌─────────▼──────────────────────▼─────────┐
+    │      Confidence-Adaptive Fusion          │
+    │  Visual weight: 0.3 (calibrated) / 0.2   │
+    │  + agreement boost + hysteresis           │
+    └──────────────────────────────────────────┘
+```
+
+## Project Structure
+
+```
+├── config/
+│   ├── asound.conf              # ALSA→PulseAudio routing config
+│   ├── config.py                # Model and training configuration
+│   └── requirements.txt         # Python dependencies
+├── models/
+│   ├── bisenet.py               # BiSeNet face parsing (ResNet18, 19 classes)
+│   ├── lip_segmentation_detector.py  # Segmentation, features, classification, calibration
+│   ├── speech_emotion_recognition.py # emotion2vec+ SER wrapper
+│   ├── emotion_detector.py      # CNN/Transformer emotion models
+│   ├── mediapipe_detector.py    # MediaPipe face mesh integration
+│   ├── audio_emotion_fusion.py  # Multimodal fusion logic
+│   └── personalized_acoustic_profiling.py
+├── tools/
+│   └── demo/
+│       └── multimodal_demo.py   # Main GUI application (~2200 lines)
+├── scripts/                     # Training, utilities, download scripts
+├── tests/                       # Unit and integration tests
+├── docs/                        # Architecture docs and guides
+├── backbones/                   # Model weights (git-ignored)
+│   ├── emotion2vec_models/      # emotion2vec+ (~1.1GB)
+│   └── face_parsing_models/     # BiSeNet weights (~52MB)
+├── Dockerfile                   # Multi-stage build (base/cpu/gpu)
+├── docker-compose.yml           # Service definitions
+└── Makefile                     # Build shortcuts
+```
+
+## Calibration
+
+The calibration system personalizes emotion detection thresholds:
+
+1. Click **"Calibrate"** in the GUI
+2. Follow the guided flow through 7 emotions (neutral → happy → sad → angry → surprise → fear → disgust)
+3. Each emotion: 3-second countdown + 3-second capture window
+4. The system computes midpoint decision boundaries between your neutral baseline and each emotion expression
+5. After calibration, the segmentation classifier uses your personalized thresholds
+
+## Recording
+
+Click **"Start Recording"** to capture a training session:
+
+- **Video**: Raw mp4v → ffmpeg re-encode to H.264 (libx264 + yuv420p + faststart) for browser playback
+- **Audio**: WAV file (16kHz mono 16-bit PCM)
+- **Visualization**: HTML dashboard with Chart.js showing emotion timeline, confidence, and audio waveform
+
+Recordings are saved to `data/training_recordings/session_YYYYMMDD_HHMMSS/`.
+
+## Docker Configuration
+
+The container requires access to:
+- **Webcam**: `/dev/video0`, `/dev/video1`
+- **Audio**: `/dev/snd` + PulseAudio socket (`/run/user/1000/pulse`)
+- **Display**: X11 socket (`/tmp/.X11-unix`) + `$DISPLAY`
+
+Key environment variables:
+- `PULSE_SERVER=unix:/run/user/1000/pulse/native`
+- `JACK_NO_START_SERVER=1` (suppress JACK noise)
+- `MODELSCOPE_CACHE=/app/backbones/emotion2vec_models`
+
+## Testing
+
 ```bash
-python scripts/train.py
-python scripts/train.py --use-mediapipe  # Train with landmarks
+# Run all tests
+python -m pytest tests/
+
+# Specific test suites
+python -m pytest tests/test_speech_emotion_recognition.py
+python -m pytest tests/test_audio_fusion_logic.py
+python -m pytest tests/test_emotion_detector_comprehensive.py
 ```
-
-### Real-time Detection
-```bash
-python scripts/webcam_detector.py --device cuda
-```
-
-### Video Recording & Analysis
-```bash
-# Record with all features
-python tools/video/video_recorder_with_landmarks.py --device cuda
-
-# Process existing video
-python tools/video/process_video.py input.mp4 --output analyzed.mp4
-
-# Analyze attention patterns
-python tools/video/analyze_attention.py analyzed_analysis.json
-```
-
-### Testing
-```bash
-python tests/test_mediapipe_hybrid.py
-python tests/test_models.py
-```
-
-## 🔧 Development
-
-```bash
-# Run quick start menu
-./scripts/quick_start.sh
-
-# Make commands
-make test                # Run model tests
-make test-audio          # Run audio fusion tests
-make test-personalized   # Run personalized acoustic tests
-make jupyter             # Start Jupyter
-make clean               # Clean artifacts
-```
-
-## 📊 Features
-
-- **Multi-modal Architecture**: CNN + Transformer + MediaPipe landmarks + Audio + Personalized Acoustics
-- **Real-time Performance**: 30+ FPS on CPU, 60+ FPS on GPU
-- **Attention Visualization**: See where the model focuses
-- **Facial Landmarks**: 468-point face mesh tracking
-- **Audio Sentiment Analysis**: Speech-to-text with NLP-based emotion detection
-- **Personalized Acoustic Profiling** 🆕: Individual vocal baseline tracking with adaptive normalization
-- **Multi-user Support**: Separate profiles for each person
-- **Profile Persistence**: Save and load user-specific acoustic profiles
-- **Video Recording**: Save and analyze emotion videos
-- **Comprehensive Analysis**: Frame-by-frame emotion and attention data
-
-## 📖 Key Documentation Files
-
-| Document | Description |
-|----------|-------------|
-| [QUICK_REFERENCE.md](docs/guides/QUICK_REFERENCE.md) | Command cheatsheet |
-| [README_VIDEO_RECORDING.md](docs/guides/README_VIDEO_RECORDING.md) | Video recording guide |
-| [VIDEO_EXAMPLES.md](docs/examples/VIDEO_EXAMPLES.md) | Usage examples |
-| [ARCHITECTURE_SUMMARY.md](docs/architecture/ARCHITECTURE_SUMMARY.md) | Architecture details |
-| [MEDIAPIPE_INTEGRATION.md](docs/architecture/MEDIAPIPE_INTEGRATION.md) | MediaPipe integration |
-
-## 🤝 Contributing
-
-See documentation in `docs/` for development guidelines.
-
-## 📝 License
-
-See LICENSE file for details.
-
----
-
-**Quick Help**: Run `./tools/video/video_help.sh` for video recording commands
